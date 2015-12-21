@@ -24,7 +24,7 @@ def init():
 
 def main():
     init()
-    opening.opening(screen)
+    # opening.opening(screen)
     good_contact.good_contact(screen)
 
 if __name__ == '__main__':

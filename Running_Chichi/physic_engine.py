@@ -64,9 +64,10 @@ class motion:
     @staticmethod
     def collision_dection(pos_1, l_1, h_1, pos_2, l_2, h_2, error_tolerance):
         situation1 = (pos_2[1] + h_2) > (pos_1[1] + error_tolerance[1])
-        situation2 = pos_2[0] > (pos_1[0] + error_tolerance[0])
-        situation3 = (pos_2[0] + l_2) < (pos_1[0] + l_1 - error_tolerance[0])
-        if situation1 and situation2 and situation3:
+        situation2 = pos_2[1] < pos_1[1]
+        situation3 = pos_2[0] > (pos_1[0] + error_tolerance[0])
+        situation4 = (pos_2[0] + l_2) < (pos_1[0] + l_1 - error_tolerance[0])
+        if situation1 and situation2 and situation3 and situation4:
             return True
         else:
             return False
@@ -74,10 +75,13 @@ class motion:
 
 class group_motion:
     class particle:
-        def __init__(self):
+        def __init__(self, particle_image):
+            self.particle_image = particle_image
+
             self.argv_dict = {'x': 0, 'y': 0, 'v_x': 0, 'v_y': 0,
                               'v0_x': 0, 'v0_y': 0, 'x0': 0, 'y0': 0,
-                              'life': -1, 'start': -1, 'stop': (True, ""), "split_time": 0}
+                              'end': -1, 'start': -1, 'life': -1,
+                              'stop': (True, ""), "split_time": 0}
             self.pos = self.get_pos()
 
         def get_property(self, name):
@@ -110,15 +114,17 @@ class group_motion:
 
             return self.pos
 
-    def __init__(self, num):
+    def __init__(self, num, particle_image):
         self.num = num
         self.particle_list = []
-        self._init_group(self.num, self.particle_list)
+        self.particle_image = particle_image
         self.motion_func = motion()
+        self.particle_image = particle_image
+        self._init_group(self.num, self.particle_list)
 
     def _init_group(self, num, particle_list):
         for i in range(num):
-            p = self.particle()
+            p = self.particle(self.particle_image)
             particle_list.append(p)
 
     def group_motion_init(self, range_v, range_x, range_y, range_angle, t_start, split_time_range):
@@ -139,6 +145,7 @@ class group_motion:
             item.set_property('v0_x', v0_x)
             item.set_property('v0_y', v0_y)
             item.set_property('life', 0)
+            item.set_property('end', 0)
             item.set_property('start', t_start)
             item.set_property('stop', (False, ""))
             item.set_property('split_time', split_time)
@@ -148,13 +155,15 @@ class group_motion:
     def group_throwing_motion(self, time_now, g, ground, ceil, wall):
         for item in self.particle_list:
             if item.get_property('stop')[0] is not True:
-                item.set_property('life', (time_now - item.get_property('start')))
+                item.set_property('end', (time_now - item.get_property('start')))
+                item.set_property('life',
+                                  (item.get_property('end') - item.get_property('start') + item.get_property('life')))
 
                 v0_x = item.get_property('v0_x')
                 v0_y = item.get_property('v0_y')
                 x0 = item.get_property('x0')
                 y0 = item.get_property('y0')
-                t = item.get_property('life')
+                t = item.get_property('end')
 
                 [x, y, v_x, v_y] = self.motion_func.throwing_motion(v0_x, v0_y, x0, y0, g, t)
 
@@ -182,36 +191,37 @@ class group_motion:
         return self.particle_list
 
     def group_split(self):
+        self.clear()
         split_list = []
         for item in self.particle_list:
-            if item.get_property('stop')[0] is True:
+            if (item.get_property('stop')[0] is True) and (item.get_property('end') != -3):
                 item.set_property('split_time', item.get_property('split_time') - 1)
                 if item.get_property('split_time') == 0:
                     self.num += 1
 
                     if item.get_property('stop')[1] == "horizontal":
-                        split_item = self.particle()
+                        split_item = self.particle(item.particle_image)
 
                         split_item.set_property('x', item.get_property('x'))
                         split_item.set_property('y', item.get_property('y'))
-                        split_item.set_property('v_x', 0 - item.get_property('v_x'))
-                        split_item.set_property('v_y', item.get_property('v_y'))
-                        split_item.set_property('life', 0)
-                        split_item.set_property('start', item.get_property('start') + item.get_property('life'))
+                        split_item.set_property('v_x', 0 - 1.1 * item.get_property('v_x'))
+                        split_item.set_property('v_y', 1.1 * item.get_property('v_y'))
+                        split_item.set_property('end', 0)
+                        split_item.set_property('start', item.get_property('start') + item.get_property('end'))
                         split_item.set_property('stop', (True, "horizontal"))
                         split_item.set_split_time(split_range)
 
                         split_list.append(split_item)
 
                     elif item.get_property('stop')[1] == "vertical":
-                        split_item = self.particle()
+                        split_item = self.particle(item.particle_image)
 
                         split_item.set_property('x', item.get_property('x'))
                         split_item.set_property('y', item.get_property('y'))
                         split_item.set_property('v_x', item.get_property('v_x'))
                         split_item.set_property('v_y', 0 - item.get_property('v_y'))
-                        split_item.set_property('life', 0)
-                        split_item.set_property('start', item.get_property('start') + item.get_property('life'))
+                        split_item.set_property('end', 0)
+                        split_item.set_property('start', item.get_property('start') + item.get_property('end'))
                         split_item.set_property('stop', (True, "vertical"))
                         split_item.set_split_time(split_range)
 
@@ -222,12 +232,11 @@ class group_motion:
         return self.particle_list
 
     def group_collision(self, coefficient):
-        motion_func = motion()
-
+        self.clear()
         for item in self.particle_list:
-            if item.get_property('stop')[0] is True:
+            if (item.get_property('stop')[0] is True) and (item.get_property('end') != -3):
                 if (item.get_property('stop')[1] == "horizontal") or (item.get_property('stop')[1] == "vertical"):
-                    v_x, v_y = motion_func.collision(item.get_property('v_x'),
+                    v_x, v_y = self.motion_func.collision(item.get_property('v_x'),
                                                      item.get_property('v_y'),
                                                      coefficient,
                                                      item.get_property('stop')[1])
@@ -237,7 +246,21 @@ class group_motion:
                     item.set_property('y0', item.get_property('y'))
                     item.set_property('v0_x', v_x)
                     item.set_property('v0_y', v_y)
-                    item.set_property('start', item.get_property('start') + item.get_property('life'))
-                    item.set_property('life', 0)
+                    item.set_property('v_x', v_x)
+                    item.set_property('v_y', v_y)
+                    item.set_property('start', item.get_property('start') + item.get_property('end'))
+                    item.set_property('end', 0)
 
         return self.particle_list
+
+    def clear_particle(self, item):
+        if item in self.particle_list:
+            self.particle_list.remove(item)
+            print "Remove item."
+        else:
+            print "Particle is not in the list."
+
+    def clear(self):
+        for item in self.particle_list:
+            if (round(item.get_property('v_x'), 1) == 0) and (round(item.get_property('v_y'), 1) == 0):
+                item.set_property('end', -3)
