@@ -3,11 +3,7 @@
 # v_1.0
 
 import pygame
-import sys
 import ConfigParser
-import os
-import common
-
 import opening
 import good_contact
 

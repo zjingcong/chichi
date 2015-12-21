@@ -62,7 +62,7 @@ class good_contact:
 
         t = pygame.time.get_ticks()
         group = physic_engine.group_motion(group_num)
-        group.group_throwing_motion_init(V0_RANGE, X0_RANGE, Y0_RANGE, ANGLE_RANGE, t, SPLIT_TIME)
+        group.group_motion_init(V0_RANGE, X0_RANGE, Y0_RANGE, ANGLE_RANGE, t, SPLIT_TIME)
 
         while True:
             t = pygame.time.get_ticks()
@@ -105,8 +105,9 @@ class good_contact:
                 self.score['right'] += 1
 
             for item in chichi_list:
-                if item['life'] != -2:
-                    self.screen.blit(self.chichi_small, [item['x'], item['y']])
+                if item.get_property('life') != -2:
+                    pos = item.get_pos()
+                    self.screen.blit(self.chichi_small, [pos[0], pos[1]])
 
             pygame.display.update()
 
@@ -128,10 +129,11 @@ class good_contact:
     @staticmethod
     def _collision(chichi_list, pos_zhenglong):
         for item in chichi_list:
-            pos_chichi = (item['x'], item['y'])
+            pos_chichi = item.get_pos()
             if motion.collision_dection(pos_zhenglong, zhenglong_pic[0], zhenglong_pic[1],
-                                        pos_chichi, chichi_small_pic[0], chichi_small_pic[1], ERROR_T):
-                item['life'] = -2
+                                        pos_chichi, chichi_small_pic[0], chichi_small_pic[1],
+                                        ERROR_T):
+                item.set_property('life', -2)
                 chichi_list.remove(item)
 
                 return True
