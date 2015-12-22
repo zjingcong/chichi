@@ -8,29 +8,16 @@ import ConfigParser
 import common
 import physic_engine
 import random
-
-V = 10
-A = 0
-G = 0.0005
-GROUND = 600
-CEIL = 140
-WALL_L = 0
-WALL_R = 965
-COLLISION_COEFFICIENT = 0.99
-V0_RANGE = (0.1, 0.6)
-X0_RANGE = (420, 580)
-Y0_RANGE = (190, 190)
-ANGLE_RANGE = (30, 150)
-ERROR_T = (0, 30)
-SPLIT_TIME = (3, 5)
-NUM_RANGE = (3, 5)
-
-zhenglong_pic = (118, 118)
-chichi_small_pic = (59, 47)
+import logging
+from good_contact_parameters import *
 
 
 class good_contact:
-    def __init__(self, screen):
+    def __init__(self, screen, mod):
+        logging.info("==========Good Contact MOD %s BEGIN===========" % mod)
+
+        self.mod = mod
+
         global screen_l, screen_h
 
         conf = ConfigParser.ConfigParser()
@@ -53,26 +40,18 @@ class good_contact:
 
         self.music = common.music(self.music_path)
 
-        self.collision_num = {'left': 0, 'right': 0}
+        self.got_num = {'left': 0, 'right': 0}
 
         self.main()
 
     def display(self):
         [x_1, y_1] = [125, 535]
         [x_2, y_2] = [800, 545]
-        t = pygame.time.get_ticks()
 
-        group_num_left = random.randint(NUM_RANGE[0], NUM_RANGE[1])
-        group_left = physic_engine.group_motion(group_num_left, self.chichi_smile)
-        group_left.group_motion_init(V0_RANGE, X0_RANGE, Y0_RANGE, ANGLE_RANGE, t, SPLIT_TIME)
-
-        group_num_right = random.randint(NUM_RANGE[0], NUM_RANGE[1])
-        group_right = physic_engine.group_motion(group_num_right, self.chichi_hung)
-        group_right.group_motion_init(V0_RANGE, X0_RANGE, Y0_RANGE, ANGLE_RANGE, t, SPLIT_TIME)
+        group_left = self._group_init(self.chichi_smile)
+        group_right = self._group_init(self.chichi_hung)
 
         while True:
-            print "WHILE BEGIN"
-
             t = pygame.time.get_ticks()
 
             for event in pygame.event.get():
@@ -95,20 +74,20 @@ class good_contact:
             x_2, y_2 = self._key_move(V, x_2, y_2, 108)
 
             group_left.group_throwing_motion(t, G, GROUND, CEIL, (WALL_L, WALL_R))
-            group_left.group_split()
+            group_left.group_split(SPLIT_COEFFICIENT)
             group_left.group_collision(COLLISION_COEFFICIENT)
 
             group_right.group_throwing_motion(t, G, GROUND, CEIL, (WALL_L, WALL_R))
-            group_right.group_split()
+            group_right.group_split(SPLIT_COEFFICIENT)
             group_right.group_collision(COLLISION_COEFFICIENT)
 
             # ==================================
             # collision detection begin
             # ==================================
             if self._collision(group_left, [x_1, y_1]):
-                self.collision_num['left'] += 1
+                self.got_num['left'] += 1
             if self._collision(group_right, [x_2, y_2]):
-                self.collision_num['right'] += 1
+                self.got_num['right'] += 1
             # ==================================
             # collision detection end
             # ==================================
@@ -124,13 +103,19 @@ class good_contact:
                 group_left.clear()
                 if item.get_property('end') != -2:
                     pos = item.get_pos()
-                    self.screen.blit(item.particle_image, [pos[0], pos[1]])
+                    chichi_left = pygame.transform.rotate(item.particle_image, item.rotation)
+                    self.screen.blit(chichi_left, [pos[0], pos[1]])
 
             for item in group_right.particle_list:
                 group_right.clear()
                 if item.get_property('end') != -2:
                     pos = item.get_pos()
-                    self.screen.blit(item.particle_image, [pos[0], pos[1]])
+                    chichi_right = pygame.transform.rotate(item.particle_image, item.rotation)
+                    self.screen.blit(chichi_right, [pos[0], pos[1]])
+
+            if self.mod['tips']:
+                self.screen.blit(group_left.particle_image, [x_1 + 40, y_1 + 145])
+                self.screen.blit(group_right.particle_image, [x_2 + 40, y_2 + 135])
 
             self.screen.blit(self.back_up, [0, 0])
             # ==================================
@@ -142,18 +127,30 @@ class good_contact:
 
             pygame.display.update()
 
-            print "collision_num: ", self.collision_num
+            print "got_num: ", self.got_num
             print "left num: ", group_left.num
             print "right num: ", group_right.num
+            print "left collision time: ", group_left.group_collision_time
+            print "right collision time: ", group_right.group_collision_time
+            print "剩余个数left: ", len(group_left.particle_list)
+            print "剩余个数right: ", len(group_right.particle_list)
 
-            if len(group_left.particle_list) <= 0 and len(group_right.particle_list) <= 0:
-                print "Win!"
+            # ==================================
+            # mod select begin
+            # ==================================
+            # Mod Endless
+            if self.mod['name'] == "endless":
+                if len(group_left.particle_list) <= 0:
+                    group_left = self._group_init(self.chichi_smile)
+                if len(group_right.particle_list) <= 0:
+                    group_right = self._group_init(self.chichi_hung)
+            # ==================================
+            # mod select end
+            # ==================================
 
+            if len(group_left.particle_list) + len(group_right.particle_list) >= 20:
+                print "Oops! Too many Chichis!"
                 sys.exit()
-
-            print "WHILE END"
-
-            # pygame.time.delay(5)
 
     @staticmethod
     def _key_move(v, x, y, key):
@@ -178,6 +175,17 @@ class good_contact:
 
         return False
 
+    @staticmethod
+    def _group_init(particle_image):
+        t = pygame.time.get_ticks()
+
+        group_num = random.randint(NUM_RANGE[0], NUM_RANGE[1])
+        group = physic_engine.group_motion(group_num, particle_image)
+        group.group_motion_init(V0_RANGE, X0_RANGE, Y0_RANGE, ANGLE_RANGE, t, SPLIT_TIME)
+
+        return group
+
     def main(self):
         self.music.play()
         self.display()
+        logging.info("==========Good Contact MOD %s END===========" % self.mod)

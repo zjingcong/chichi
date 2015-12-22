@@ -36,6 +36,7 @@ class opening:
         flag = 0
         while True:
             for event in pygame.event.get():
+                # print event.type
                 if event.type == pygame.QUIT:
                     sys.exit()
                 if event.type == pygame.MOUSEBUTTONDOWN:

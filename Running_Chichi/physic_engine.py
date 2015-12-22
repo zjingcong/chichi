@@ -4,6 +4,7 @@
 
 import random
 import math
+import logging
 
 
 class motion:
@@ -72,29 +73,41 @@ class motion:
         else:
             return False
 
+    @staticmethod
+    def detect_on_the_ground(v_y, g, error_tolerance):
+        l = math.pow(v_y, 2) / (2 * g)
+        if l <= error_tolerance:
+            return True
+        else:
+            return False
+
+
+COLLISION_ROTATION_RANGE = (-20, 20)
+
 
 class group_motion:
     class particle:
         def __init__(self, particle_image):
             self.particle_image = particle_image
-
             self.argv_dict = {'x': 0, 'y': 0, 'v_x': 0, 'v_y': 0,
                               'v0_x': 0, 'v0_y': 0, 'x0': 0, 'y0': 0,
+                              'rotation': 0,
                               'end': -1, 'start': -1, 'life': -1,
                               'stop': (True, ""), "split_time": 0}
+            self.rotation = self.argv_dict['rotation']
             self.pos = self.get_pos()
 
         def get_property(self, name):
             if name in self.argv_dict:
                 return self.argv_dict[name]
             else:
-                print "ERROR: No Attribution."
+                logging.warning("ERROR: No Attribution.")
 
         def set_property(self, name, value):
             if name in self.argv_dict:
                 self.argv_dict[name] = value
             else:
-                print "ERROR: No Attribution."
+                logging.warning("ERROR: No Attribution.")
 
         def fresh_properties(self, argv_dict_new):
             self.argv_dict = argv_dict_new
@@ -106,6 +119,15 @@ class group_motion:
             self.set_property('split_time', split_time)
 
             return split_time
+
+        def set_rotation(self):
+            rotation = random.randint(COLLISION_ROTATION_RANGE[0], COLLISION_ROTATION_RANGE[1])
+            self.set_property('rotation', rotation)
+            self.rotation = rotation
+
+            print "ROTATION SET."
+
+            return rotation
 
         def get_pos(self):
             x = self.get_property('x')
@@ -120,6 +142,7 @@ class group_motion:
         self.particle_image = particle_image
         self.motion_func = motion()
         self.particle_image = particle_image
+        self.group_collision_time = 0
         self._init_group(self.num, self.particle_list)
 
     def _init_group(self, num, particle_list):
@@ -152,7 +175,10 @@ class group_motion:
 
         return self.particle_list
 
-    def group_throwing_motion(self, time_now, g, ground, ceil, wall):
+    def group_throwing_motion(self, time_now, a, ground, ceil, wall):
+        global A_g
+        A_g = a
+
         for item in self.particle_list:
             if item.get_property('stop')[0] is not True:
                 item.set_property('end', (time_now - item.get_property('start')))
@@ -165,7 +191,7 @@ class group_motion:
                 y0 = item.get_property('y0')
                 t = item.get_property('end')
 
-                [x, y, v_x, v_y] = self.motion_func.throwing_motion(v0_x, v0_y, x0, y0, g, t)
+                [x, y, v_x, v_y] = self.motion_func.throwing_motion(v0_x, v0_y, x0, y0, a, t)
 
                 item.set_property('v_x', v_x)
                 item.set_property('v_y', v_y)
@@ -190,7 +216,7 @@ class group_motion:
 
         return self.particle_list
 
-    def group_split(self):
+    def group_split(self, coefficient):
         self.clear()
         split_list = []
         for item in self.particle_list:
@@ -198,14 +224,16 @@ class group_motion:
                 item.set_property('split_time', item.get_property('split_time') - 1)
                 if item.get_property('split_time') == 0:
                     self.num += 1
+                    logging.info("----------Particle split BEGIN----------")
+                    logging.info("BEFORE %s" % str(item.argv_dict))
 
                     if item.get_property('stop')[1] == "horizontal":
                         split_item = self.particle(item.particle_image)
 
                         split_item.set_property('x', item.get_property('x'))
                         split_item.set_property('y', item.get_property('y'))
-                        split_item.set_property('v_x', 0 - 1.1 * item.get_property('v_x'))
-                        split_item.set_property('v_y', 1.1 * item.get_property('v_y'))
+                        split_item.set_property('v_x', 0 - coefficient * item.get_property('v_x'))
+                        split_item.set_property('v_y', coefficient * item.get_property('v_y'))
                         split_item.set_property('end', 0)
                         split_item.set_property('start', item.get_property('start') + item.get_property('end'))
                         split_item.set_property('stop', (True, "horizontal"))
@@ -227,6 +255,10 @@ class group_motion:
 
                         split_list.append(split_item)
 
+                    logging.info("AFTER [OLD] %s" % str(item.argv_dict))
+                    logging.info("AFTER [NEW] %s" % str(split_item.argv_dict))
+                    logging.info("----------Particle split END----------")
+
         self.particle_list.extend(split_list)
 
         return self.particle_list
@@ -236,6 +268,10 @@ class group_motion:
         for item in self.particle_list:
             if (item.get_property('stop')[0] is True) and (item.get_property('end') != -3):
                 if (item.get_property('stop')[1] == "horizontal") or (item.get_property('stop')[1] == "vertical"):
+                    self.group_collision_time += 1
+                    logging.info("----------Particle collision BEGIN----------")
+                    logging.info("BEFORE %s" % str(item.argv_dict))
+
                     v_x, v_y = self.motion_func.collision(item.get_property('v_x'),
                                                      item.get_property('v_y'),
                                                      coefficient,
@@ -250,17 +286,26 @@ class group_motion:
                     item.set_property('v_y', v_y)
                     item.set_property('start', item.get_property('start') + item.get_property('end'))
                     item.set_property('end', 0)
+                    item.set_rotation()
+
+                    logging.info("AFTER %s" % str(item.argv_dict))
+                    logging.info("----------Particle collision END----------")
 
         return self.particle_list
 
     def clear_particle(self, item):
         if item in self.particle_list:
+            info = "REMOVE ITEM: %d%s" % (self.particle_list.index(item), str(item.argv_dict))
             self.particle_list.remove(item)
-            print "Remove item."
+            logging.info(info)
         else:
-            print "Particle is not in the list."
+            logging.warning("ERROR: Particle is not in the list.")
 
     def clear(self):
         for item in self.particle_list:
-            if (round(item.get_property('v_x'), 1) == 0) and (round(item.get_property('v_y'), 1) == 0):
-                item.set_property('end', -3)
+            if ((item.get_property('stop')[0]) is True)\
+                    and (item.get_property('stop')[1] == "horizontal")\
+                    and (item.get_property('y') > 300):
+                v_y = item.get_property('v_y')
+                if self.motion_func.detect_on_the_ground(v_y, A_g, 50):
+                    item.set_property('end', -3)

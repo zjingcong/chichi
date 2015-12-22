@@ -4,11 +4,18 @@
 
 import pygame
 import ConfigParser
+import logging
+import os
+
 import opening
 import good_contact
 
 
 def init():
+    win_x = 180
+    win_y = 30
+    os.environ['SDL_VIDEO_WINDOW_POS'] = "%d,%d" % (win_x, win_y)
+
     conf = ConfigParser.ConfigParser()
     conf.read("config.conf")
     screen_l = int(conf.get("variable", "SCREEN_LENGTH"))
@@ -19,13 +26,21 @@ def init():
     screen = pygame.display.set_mode([screen_l, screen_h], 0, 32)
     pygame.display.set_caption("Running Chichi V1.0 By zjingcong")
 
+    logging.basicConfig(level=logging.DEBUG,
+                        format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
+                        datefmt='%a, %d %b %Y %H:%M:%S',
+                        filename='Running_Chichi.log',
+                        filemode='w')
+
     return
 
 
 def main():
     init()
+    logging.info("===========Running Chichi BEGIN===========")
     # opening.opening(screen)
-    good_contact.good_contact(screen)
+    mod = {'tips': True, 'name': 'endless'}
+    good_contact.good_contact(screen, mod)
 
 if __name__ == '__main__':
     main()
