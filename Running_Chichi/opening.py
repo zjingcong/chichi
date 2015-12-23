@@ -3,63 +3,83 @@
 # v_1.0
 
 import pygame
-import ConfigParser
 import common
 import sys
+import father
 
 
-class opening:
+class opening(father.module):
     def __init__(self, screen):
-        conf = ConfigParser.ConfigParser()
-        conf.read("config.conf")
-        image_path = str(conf.get("path", "IMAGE_PATH"))
-        tone_path = str(conf.get("path", "TONE_PATH"))
-        button_path = str(conf.get("path", "BUTTON_PATH"))
-        current_dir = common.CURRENT_DIR
+        super(opening, self).__init__(screen)
 
-        self.screen = screen
-        self.music_path = "%s%sopening.mp3" % (current_dir, tone_path)
-        self.background_map = pygame.image.load("%s%sfood_map.jpg" % (current_dir, image_path)).convert()
-        self.logo = pygame.image.load("%s%slogo.png" % (current_dir, image_path)).convert_alpha()
-        self.title = pygame.image.load("%s%stitle.png" % (current_dir, image_path)).convert_alpha()
+    def _image_load(self):
+        super(opening, self)._image_load()
+        self.background = pygame.image.load("%s%sfood_map.jpg" % (self.current_dir, self.image_path)).convert()
+        self.title = pygame.image.load("%s%stitle.png" % (self.current_dir, self.image_path)).convert_alpha()
+        self.logo = pygame.image.load("%s%slogo.png" % (self.current_dir, self.image_path)).convert_alpha()
 
+    def _tone_path_load(self):
+        super(opening, self)._tone_path_load()
+        self.music_path = "%s%sopening.mp3" % (self.current_dir, self.tone_path)
+
+    def _button_path_load(self):
+        super(opening, self)._button_path_load()
+        self.button_up = "%s%splaying_up.png" % (self.current_dir, self.button_path)
+        self.button_down = "%s%splaying_down.png" % (self.current_dir, self.button_path)
+
+    def _module_init(self):
+        super(opening, self)._module_init()
         self.music = common.music(self.music_path)
-        self.button = common.button("%s%splaying.png" % (current_dir, button_path), 362, 590, 300, 100, screen)
+        self.logo_anim = self._logo_anim_init()
+        self.button = self._button_init()
 
-        self.main()
+    def _logo_anim_init(self):
+        screen = self.screen
+        logo = self.logo
+        frame_1 = pygame.transform.rotate(logo, 20)
+        frame_2 = pygame.transform.rotate(logo, -20)
+        frame_iamge_list = [{'image': frame_1, 'pos': (130, -55)}, {'image': frame_2, 'pos': (130, -55)}]
+
+        anim = common.animation(frame_iamge_list, 140, 'endless', screen)
+
+        return anim
+
+    def _button_init(self):
+        button_up = self.button_up
+        button_down = self.button_down
+        screen = self.screen
+        button = common.button(button_up, button_down, "enter game", 370, 590, 300, 100, screen)
+
+        return button
 
     def display(self):
-        self.screen.blit(self.background_map, [0, 0])
+        super(opening, self).display()
+
+        self.screen.blit(self.background, [0, 0])
         pygame.display.update()
         pygame.time.delay(1500)
 
-        flag = 0
         while True:
             for event in pygame.event.get():
                 # print event.type
                 if event.type == pygame.QUIT:
                     sys.exit()
-                if event.type == pygame.MOUSEBUTTONDOWN:
-                    x, y = pygame.mouse.get_pos()
-                    if self.button.click(x, y):
-                        return
+                self.button.mouse_detection(event)
 
-            self.screen.blit(self.background_map, [0, 0])
+            if self.button.out:
+                return self.button.output
+
+            self.screen.blit(self.background, [0, 0])
             self.screen.blit(self.title, [212, 90])
-            self.button.put()
+            self.button.button_fresh()
+            self.button.button_layout()
 
-            if flag == 0:
-                logo = pygame.transform.rotate(self.logo, 20)
-                self.screen.blit(logo, [130, -55])
-                flag = 1
-            else:
-                logo = pygame.transform.rotate(self.logo, 340)
-                self.screen.blit(logo, [130, -55])
-                flag = 0
+            self.logo_anim.display()
 
             pygame.display.update()
-            pygame.time.delay(1200)
 
     def main(self):
         self.music.play()
-        self.display()
+        output = self.display()
+        self.music.stop()
+        return output

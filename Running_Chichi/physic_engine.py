@@ -125,8 +125,6 @@ class group_motion:
             self.set_property('rotation', rotation)
             self.rotation = rotation
 
-            print "ROTATION SET."
-
             return rotation
 
         def get_pos(self):

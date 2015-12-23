@@ -9,6 +9,7 @@ import os
 
 import opening
 import good_contact
+from good_contact_wrapper import good_contact_wrapper
 
 
 def init():
@@ -32,15 +33,31 @@ def init():
                         filename='Running_Chichi.log',
                         filemode='w')
 
-    return
-
 
 def main():
     init()
+
     logging.info("===========Running Chichi BEGIN===========")
-    # opening.opening(screen)
-    mod = {'tips': True, 'name': 'endless'}
-    good_contact.good_contact(screen, mod)
+    open_window = opening.opening(screen)
+    open_out = open_window.main()
+
+    if open_out == "enter game":
+        wrapper = good_contact_wrapper(screen)
+        wrapper.main()
+
+        '''
+        logging.info("===========ENTER Good Contact===========")
+        # mod = {'tips': True, 'name': 'endless'}
+        # mod = {'tips': True, 'name': 'timer'}
+        mod = {'tips': True, 'name': 'single'}
+        good = good_contact.good_contact(screen)
+        good.set_mod(mod)
+        good.main()
+        logging.info("===========EXIT Good Contact===========")
+        '''
+
+    logging.info("===========Running Chichi END===========")
+
 
 if __name__ == '__main__':
     main()
