@@ -254,8 +254,8 @@ class score_out(father.module):
                     print pygame.mouse.get_pos()
                 self.button.mouse_detection(event)
 
-                if self.button.out:
-                    return self.button.output
+            if self.button.out:
+                return self.button.output
 
             # ==================================
             # layout begin
