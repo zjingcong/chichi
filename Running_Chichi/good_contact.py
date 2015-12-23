@@ -169,7 +169,7 @@ class good_contact:
                 # score for endless mod
                 score = 10 * (self.got_num['left'] + self.got_num['right'])
 
-            if (num_active_left + num_active_right >= 50) or (num_block_left + num_block_right >= 70):
+            if (num_active_left + num_active_right >= 30) or (num_block_left + num_block_right >= 50):
                 print "Oops! Too many Chichis!"
                 self.out = 1
                 print "SCORE: ", score
@@ -197,7 +197,7 @@ class good_contact:
             if self.mod['name'] == "single":
                 t_end = pygame.time.get_ticks()
                 score = 1000 / (t_end - t_start) + 10 * (self.got_num['left'] + self.got_num['right'])
-                if (num_active_left + num_active_right >= 50) or (num_block_left + num_block_right >= 70):
+                if (num_active_left + num_active_right >= 30) or (num_block_left + num_block_right >= 50):
                     print "Oops! Too many Chichis!"
                     self.out = 1
                     print "SCORE: ", score

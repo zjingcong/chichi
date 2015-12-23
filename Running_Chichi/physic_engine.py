@@ -82,7 +82,7 @@ class motion:
             return False
 
 
-COLLISION_ROTATION_RANGE = (-20, 20)
+COLLISION_ROTATION_RANGE = (-30, 30)
 
 
 class group_motion:
@@ -122,7 +122,7 @@ class group_motion:
 
         def set_rotation(self):
             rotation = random.randint(COLLISION_ROTATION_RANGE[0], COLLISION_ROTATION_RANGE[1])
-            self.set_property('rotation', rotation)
+            self.set_property('rotation', rotation + self.get_property('rotation'))
             self.rotation = rotation
 
             return rotation

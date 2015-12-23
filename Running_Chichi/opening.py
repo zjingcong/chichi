@@ -71,7 +71,7 @@ class opening(father.module):
 
             self.screen.blit(self.background, [0, 0])
             self.screen.blit(self.title, [212, 90])
-            self.button.button_fresh(0)
+            self.button.button_fresh(1)
             self.button.button_layout()
 
             self.logo_anim.display()

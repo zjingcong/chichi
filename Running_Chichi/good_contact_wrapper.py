@@ -11,6 +11,7 @@ import pygame
 import common
 import father
 import sys
+from scratch_card import scratch_card as card
 
 
 class good_contact_wrapper(father.module):
@@ -90,7 +91,26 @@ class good_contact_wrapper(father.module):
 
             pygame.display.update()
 
+    def game(self, mod):
+        good = good_contact.good_contact(self.screen)
+        good.set_mod(mod)
+        out, score = good.main()
+        good.music.stop()
+
+        score_out_obj = score_out(self.screen, out, score)
+        score_output = score_out_obj.main()
+
+        if score_output == "score":
+            scratch_card = score_card(self.screen, score)
+            card_out = scratch_card.main()
+            score_out_obj.music.stop()
+            if card_out == "menu":
+                self.main()
+            if card_out == "again":
+                self.game(mod)
+
     def main(self):
+        self.music = common.music(self.music_path)
         self.music.play()
         output = self.display()
 
@@ -98,20 +118,12 @@ class good_contact_wrapper(father.module):
             mod_selection = mod_set(self.screen)
             mod_select = mod_selection.main()
             mod = {'tips': True, 'name': mod_select}
-
-            good = good_contact.good_contact(self.screen)
-            good.set_mod(mod)
-            out, score = good.main()
             self.music.stop()
-            score = score_out(self.screen, out, score)
-            # score.init(out, score)
-            score.main()
+            self.game(mod)
 
         else:
             print "Waiting..."
-
             self.music.stop()
-            return
 
 
 class mod_set(father.module):
@@ -275,4 +287,100 @@ class score_out(father.module):
         self.music.play()
         output = self.display()
         print output
+        return output
+
+
+class score_card(father.module):
+    def __init__(self, screen, score):
+        self.score = score
+        super(score_card, self).__init__(screen)
+
+    def _image_load(self):
+        super(score_card, self)._image_load()
+
+        self.background = pygame.image.load("%s%sgood_contact_back.png" % (self.current_dir, self.image_path)).convert()
+        self.scratch_card = pygame.image.load("%s%sscratch_card.png"
+                                              % (self.current_dir, self.image_path)).convert_alpha()
+
+    def _button_path_load(self):
+        super(score_card, self)._button_path_load()
+
+        self.again_up = "%s%sbutton_again_up.png" % (self.current_dir, self.button_path)
+        self.again_down = "%s%sbutton_again_down.png" % (self.current_dir, self.button_path)
+        self.menu_up = "%s%sbutton_menu_up.png" % (self.current_dir, self.button_path)
+        self.menu_down = "%s%sbutton_menu_down.png" % (self.current_dir, self.button_path)
+
+    def _font_path_load(self):
+        super(score_card, self)._font_path_load()
+
+        self.font = '%s%sBROADW_0.TTF' % (self.current_dir, self.font_path)
+
+    def _module_init(self):
+        super(score_card, self)._module_init()
+
+        self.button_list = []
+        button_again, button_menu = self._button_init()
+        self.button_list.append(button_again)
+        self.button_list.append(button_menu)
+
+        self.scratch = card(15, 300, 180, (370, 430), [128, 128, 128], 6, self.screen)
+
+        self._text()
+
+    def _text(self):
+        font = pygame.font.Font(self.font, 35)
+        color = [97, 57, 33]
+        text_content = "TOTLE: %d" % self.score
+        self.text = font.render(text_content, False, color)
+        self.textRect = self.text.get_rect()
+        self.textRect.centerx = 520
+        self.textRect.centery = 520
+
+    def _button_init(self):
+        screen = self.screen
+        again = common.button(self.again_up, self.again_down, "again", 260, 630, 161, 93, screen)
+        menu = common.button(self.menu_up, self.menu_down, "menu", 600, 630, 191, 95, screen)
+
+        return again, menu
+
+    def display(self):
+        super(score_card, self).display()
+
+        self.screen.blit(self.background, [0, 0])
+        pygame.display.update()
+
+        while True:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    sys.exit()
+                # test
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    print pygame.mouse.get_pos()
+                for button in self.button_list:
+                    button.mouse_detection(event)
+                self.scratch.fresh_status(event)
+
+            for button in self.button_list:
+                if button.out:
+                    return button.output
+
+            # ==================================
+            # layout begin
+            # ==================================
+            self.screen.blit(self.background, [0, 0])
+            self.screen.blit(self.scratch_card, [0, 0])
+            self.screen.blit(self.text, self.textRect)
+            self.scratch.display()
+            for button in self.button_list:
+                button.button_fresh(0)
+                button.button_layout()
+            # ==================================
+            # layout end
+            # ==================================
+
+            pygame.display.update()
+
+    def main(self):
+        output = self.display()
+
         return output

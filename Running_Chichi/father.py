@@ -18,12 +18,14 @@ class module(object):
         self.image_path = str(conf.get("path", "IMAGE_PATH"))
         self.tone_path = str(conf.get("path", "TONE_PATH"))
         self.button_path = str(conf.get("path", "BUTTON_PATH"))
+        self.font_path = str(conf.get("path", "FONT_PATH"))
         self.current_dir = common.CURRENT_DIR
         self.screen = screen
 
         self._image_load()
         self._tone_path_load()
         self._button_path_load()
+        self._font_path_load()
         self._module_init()
 
     def _image_load(self):
@@ -33,7 +35,10 @@ class module(object):
         logging.info("-----------TONE LOADING----------")
 
     def _button_path_load(self):
-        logging.info("-----------BUTTONLOADING----------")
+        logging.info("-----------BUTTON LOADING----------")
+
+    def _font_path_load(self):
+        logging.info("-----------FONT LOADING----------")
 
     def _module_init(self):
         logging.info("-----------MODULE LOADING----------")
