@@ -10,6 +10,7 @@ import os
 import opening
 import good_contact
 from good_contact_wrapper import good_contact_wrapper
+from good_contact_wrapper import score_out
 
 
 def init():

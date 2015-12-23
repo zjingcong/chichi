@@ -40,6 +40,7 @@ class good_contact:
         self.music = common.music(self.music_path)
 
         self.got_num = {'left': 0, 'right': 0}
+        self.out = -1   # 0: win, 1: too many Chichis, 2: time out
 
     def set_mod(self, mod):
         self.mod = mod
@@ -170,8 +171,9 @@ class good_contact:
 
             if (num_active_left + num_active_right >= 50) or (num_block_left + num_block_right >= 70):
                 print "Oops! Too many Chichis!"
+                self.out = 1
                 print "SCORE: ", score
-                return
+                return self.out, score
 
             # Mod Timer
             if self.mod['name'] == "timer":
@@ -187,8 +189,9 @@ class good_contact:
                 if t_end - t_start >= 30000:
                     score = 10 * (self.got_num['left'] + self.got_num['right'])
                     print "Oops! Time out!"
+                    self.out = 2
                     print "SCORE: ", score
-                    return
+                    return self.out, score
 
             # Mod Single
             if self.mod['name'] == "single":
@@ -196,9 +199,11 @@ class good_contact:
                 score = 1000 / (t_end - t_start) + 10 * (self.got_num['left'] + self.got_num['right'])
                 if (num_active_left + num_active_right >= 50) or (num_block_left + num_block_right >= 70):
                     print "Oops! Too many Chichis!"
+                    self.out = 1
                     print "SCORE: ", score
-                    return
+                    return self.out, score
                 if num_active_left + num_active_right == 0:
+                    self.out = 0
                     if num_block_left + num_block_right == 0:
                         print "PERFECT!"
                         print num_block_right, num_block_left
@@ -210,7 +215,7 @@ class good_contact:
                         print "Oops! Got nothing!"
                         score_extra = -100
                     print "SCORE: ", score + score_extra
-                    return
+                    return self.out, score
             # ==================================
             # mod select end
             # ==================================
@@ -267,5 +272,7 @@ class good_contact:
 
     def main(self):
         self.music.play()
-        self.display()
+        out, score = self.display()
         logging.info("==========Good Contact END===========")
+
+        return out, score

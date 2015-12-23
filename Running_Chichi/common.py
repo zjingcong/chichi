@@ -159,13 +159,17 @@ class button:
             self.mouse_status = 'up'
             self.mouse_pos = pygame.mouse.get_pos()
 
-    def button_fresh(self):
+    # mod: 1 mouse up, button up, mod: 0 mouse up, button stay the same
+    def button_fresh(self, mod=1):
         if self.status == -1 and self.mouse_status == 'down' and self._mouse_on_button():
             self.status = 1
             self.icon = self._button_icon_down
         elif self.status == 1 and self.mouse_status == 'up' and self._mouse_on_button():
             self.status = 0
-            self.icon = self._button_icon_up
+            if mod == 1:
+                self.icon = self._button_icon_up
+            elif mod == 0:
+                self.icon = self._button_icon_down
 
     def button_layout(self):
         self._screen.blit(self.icon, [self._x, self._y])

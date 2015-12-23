@@ -101,11 +101,17 @@ class good_contact_wrapper(father.module):
 
             good = good_contact.good_contact(self.screen)
             good.set_mod(mod)
-            good.main()
+            out, score = good.main()
+            self.music.stop()
+            score = score_out(self.screen, out, score)
+            # score.init(out, score)
+            score.main()
+
         else:
             print "Waiting..."
 
-        self.music.stop()
+            self.music.stop()
+            return
 
 
 class mod_set(father.module):
@@ -182,4 +188,91 @@ class mod_set(father.module):
 
     def main(self):
         output = self.display()
+        return output
+
+
+class score_out(father.module):
+    def __init__(self, screen, out, score):
+        self.out = out
+        self.score = score
+        super(score_out, self).__init__(screen)
+
+    # 0: win, 1: too many Chichis, 2: time out
+    def init(self, out, score):
+        self.out = out
+        self.score = score
+
+    def _image_load(self):
+        super(score_out, self)._image_load()
+
+        self.background = pygame.image.load("%s%sgood_contact_back.png" % (self.current_dir, self.image_path)).convert()
+        self.bag = pygame.image.load("%s%slucky_bag.png" % (self.current_dir, self.image_path)).convert_alpha()
+
+        self._text_image_load()
+
+    def _text_image_load(self):
+        if self.out == 0:
+            self.text = pygame.image.load("%s%swin.png" % (self.current_dir, self.image_path)).convert_alpha()
+        elif self.out == 1:
+            self.text = pygame.image.load("%s%sgame_over.png" % (self.current_dir, self.image_path)).convert_alpha()
+        elif self.out == 2:
+            self.text = pygame.image.load("%s%stime_out.png" % (self.current_dir, self.image_path)).convert_alpha()
+
+    def _tone_path_load(self):
+        super(score_out, self)._tone_path_load()
+        self.music_path = "%s%sout.mp3" % (self.current_dir, self.tone_path)
+
+    def _button_path_load(self):
+        super(score_out, self)._button_path_load()
+
+        self.score_up = "%s%sbutton_score_up.png" % (self.current_dir, self.button_path)
+        self.score_down = "%s%sbutton_score_down.png" % (self.current_dir, self.button_path)
+
+    def _module_init(self):
+        super(score_out, self)._module_init()
+        self.music = common.music(self.music_path)
+        self.button = self._button_init()
+
+    def _button_init(self):
+        screen = self.screen
+        score = common.button(self.score_up, self.score_down, "score", 435, 255, 172, 211, screen)
+
+        return score
+
+    def display(self):
+        super(score_out, self).display()
+
+        pygame.display.update()
+        pygame.time.delay(1500)
+
+        while True:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    sys.exit()
+                # test
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    print pygame.mouse.get_pos()
+                self.button.mouse_detection(event)
+
+                if self.button.out:
+                    return self.button.output
+
+            # ==================================
+            # layout begin
+            # ==================================
+            self.screen.blit(self.background, [0, 0])
+            self.screen.blit(self.bag, [0, 0])
+            self.screen.blit(self.text, [0, 0])
+            self.button.button_fresh(0)
+            self.button.button_layout()
+            # ==================================
+            # layout end
+            # ==================================
+
+            pygame.display.update()
+
+    def main(self):
+        self.music.play()
+        output = self.display()
+        print output
         return output
