@@ -5,10 +5,10 @@
 import pygame
 import common
 import sys
-import father
+import wrapper
 
 
-class opening(father.module):
+class opening(wrapper.module):
     def __init__(self, screen):
         super(opening, self).__init__(screen)
 
@@ -29,7 +29,7 @@ class opening(father.module):
 
     def _module_init(self):
         super(opening, self)._module_init()
-        self.music = common.music(self.music_path)
+        self.music = common.tone(self.music_path)
         self.logo_anim = self._logo_anim_init()
         self.button = self._button_init()
 

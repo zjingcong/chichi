@@ -9,26 +9,36 @@ import physic_engine
 import random
 import logging
 from good_contact_parameters import *
+from pygame.locals import *
+import wrapper
 
 
-class good_contact:
+class good_contact(wrapper.module):
     def __init__(self, screen):
         logging.info("==========Good Contact BEGIN===========")
 
         self.mod = {}
 
         global screen_l, screen_h
-
         conf = ConfigParser.ConfigParser()
         conf.read("config.conf")
-        image_path = str(conf.get("path", "IMAGE_PATH"))
-        tone_path = str(conf.get("path", "TONE_PATH"))
         screen_l = int(conf.get("variable", "SCREEN_LENGTH"))
         screen_h = int(conf.get("variable", "SCREEN_HIGH"))
-        current_dir = common.CURRENT_DIR
 
-        self.screen = screen
-        self.music_path = "%s%sgood contact.mp3" % (current_dir, tone_path)
+        self.got_num = {'left': 0, 'right': 0}
+        self.score_total = 0
+        self.score_extra = 0
+        self.score_time = 0  # single mod > 0
+        self.score = {'total': 0, 'extra': 0, 'left': 0, 'right': 0, 'time': 0}
+        self.out = -1   # 0: win, 1: too many Chichis, 2: time out, -1: interruption
+
+        super(good_contact, self).__init__(screen)
+
+    def _image_load(self):
+        super(good_contact, self)._image_load()
+
+        current_dir = self.current_dir
+        image_path = self.image_path
 
         self.back_up = pygame.image.load("%s%sgood_contact_back_up.png" % (current_dir, image_path)).convert_alpha()
         self.back_down = pygame.image.load("%s%sgood_contact_back_down.png" % (current_dir, image_path)).convert_alpha()
@@ -37,10 +47,20 @@ class good_contact:
         self.chichi_smile = pygame.image.load("%s%schichi_smile_small.png" % (current_dir, image_path)).convert_alpha()
         self.chichi_hung = pygame.image.load("%s%schichi_hungry_small.png" % (current_dir, image_path)).convert_alpha()
 
-        self.music = common.music(self.music_path)
+    def _tone_path_load(self):
+        super(good_contact, self)._tone_path_load()
 
-        self.got_num = {'left': 0, 'right': 0}
-        self.out = -1   # 0: win, 1: too many Chichis, 2: time out
+        current_dir = self.current_dir
+        tone_path = self.tone_path
+
+        self.music_path = "%s%sgood contact.mp3" % (current_dir, tone_path)
+        self.qiu_path = "%s%sqiu.wav" % (current_dir, tone_path)
+
+    def _module_init(self):
+        super(good_contact, self)._module_init()
+
+        self.music = common.tone(self.music_path)
+        self.qiu = common.tone(self.qiu_path, 0)
 
     def set_mod(self, mod):
         self.mod = mod
@@ -49,6 +69,8 @@ class good_contact:
         return mod
 
     def display(self):
+        super(good_contact, self).display()
+
         t_start = pygame.time.get_ticks()
 
         [x_1, y_1] = [125, 530]
@@ -76,13 +98,13 @@ class good_contact:
             global motion
             motion = physic_engine.motion()
             # key: a
-            x_1, y_1 = self._key_move(-V, x_1, y_1, 97)
+            x_1, y_1 = self._key_move(-V, x_1, y_1, pygame.K_a)
             # key: s
-            x_1, y_1 = self._key_move(V, x_1, y_1, 115)
+            x_1, y_1 = self._key_move(V, x_1, y_1, pygame.K_s)
             # key: k
-            x_2, y_2 = self._key_move(-V, x_2, y_2, 107)
+            x_2, y_2 = self._key_move(-V, x_2, y_2, pygame.K_k)
             # key: l
-            x_2, y_2 = self._key_move(V, x_2, y_2, 108)
+            x_2, y_2 = self._key_move(V, x_2, y_2, pygame.K_l)
 
             coefficient = COLLISION_COEFFICIENT
 
@@ -100,8 +122,10 @@ class good_contact:
             # collision detection begin
             # ==================================
             if self._collision(group_left, [x_1, y_1]):
+                self.qiu.play(ch_mod=2, pos_x=x_1, width_x=screen_l)
                 self.got_num['left'] += 1
             if self._collision(group_right, [x_2, y_2]):
+                self.qiu.play(ch_mod=2, pos_x=x_2, width_x=screen_l)
                 self.got_num['right'] += 1
             # ==================================
             # collision detection end
@@ -157,65 +181,61 @@ class good_contact:
             # ==================================
             # mod select begin
             # ==================================
+            # out: 0: win, 1: too many Chichis, 2: time out
             # Mod Endless
             if self.mod['name'] == "endless":
-                if num_active_left <= 0:
-                    group_left = self._group_init(self.chichi_smile)
-                    group_left_list.append(group_left)
-                if num_active_right <= 0:
-                    group_right = self._group_init(self.chichi_hung)
-                    group_right_list.append(group_right)
+                # new group
+                self._new_group(num_active_left, num_active_right, group_left_list, group_right_list)
 
                 # score for endless mod
-                score = 10 * (self.got_num['left'] + self.got_num['right'])
-
-            if (num_active_left + num_active_right >= 30) or (num_block_left + num_block_right >= 50):
-                print "Oops! Too many Chichis!"
+                self.score_total = 10 * (self.got_num['left'] + self.got_num['right'])
+            if (num_active_left + num_active_right >= DEAD_ACTIVE) or (num_block_left + num_block_right >= DEAD_BLOCK):
+                t_end = pygame.time.get_ticks()
+                self.score_time = t_end - t_start
+                self.score_total += int(self.score_time / 10000)
                 self.out = 1
-                print "SCORE: ", score
-                return self.out, score
+                self._score_wrapper()
+
+                return self.out, self.score
 
             # Mod Timer
             if self.mod['name'] == "timer":
-                if num_active_left <= 0:
-                    group_left = self._group_init(self.chichi_smile)
-                    group_left_list.append(group_left)
-                if num_active_right <= 0:
-                    group_right = self._group_init(self.chichi_hung)
-                    group_right_list.append(group_right)
+                # new group
+                self._new_group(num_active_left, num_active_right, group_left_list, group_right_list)
 
                 t_end = pygame.time.get_ticks()
-
-                if t_end - t_start >= 30000:
-                    score = 10 * (self.got_num['left'] + self.got_num['right'])
-                    print "Oops! Time out!"
+                if t_end - t_start >= 30000:       # 30s
+                    self.score_total = 10 * (self.got_num['left'] + self.got_num['right'])
                     self.out = 2
-                    print "SCORE: ", score
-                    return self.out, score
+                    self._score_wrapper()
+
+                    return self.out, self.score
 
             # Mod Single
             if self.mod['name'] == "single":
                 t_end = pygame.time.get_ticks()
-                score = 1000 / (t_end - t_start) + 10 * (self.got_num['left'] + self.got_num['right'])
-                if (num_active_left + num_active_right >= 30) or (num_block_left + num_block_right >= 50):
-                    print "Oops! Too many Chichis!"
+                self.score_time = t_end - t_start
+                self.score_total = 1000000 / self.score_time + 10 * (self.got_num['left'] + self.got_num['right'])
+
+                if (num_active_left + num_active_right >= DEAD_ACTIVE + 5) \
+                        or (num_block_left + num_block_right >= DEAD_BLOCK):
                     self.out = 1
-                    print "SCORE: ", score
-                    return self.out, score
+                    self._score_wrapper()
+
+                    return self.out, self.score
+
                 if num_active_left + num_active_right == 0:
                     self.out = 0
                     if num_block_left + num_block_right == 0:
-                        print "PERFECT!"
                         print num_block_right, num_block_left
-                        score_extra = 100
+                        self.score_extra = 100
                     elif self.got_num['left'] + self.got_num['right'] > 0:
-                        print "Good!"
-                        score_extra = 0
+                        self.score_extra = 0
                     else:
-                        print "Oops! Got nothing!"
-                        score_extra = -100
-                    print "SCORE: ", score + score_extra
-                    return self.out, score
+                        self.score_extra = -100
+
+                    self._score_wrapper()
+                    return self.out, self.score
             # ==================================
             # mod select end
             # ==================================
@@ -243,18 +263,18 @@ class good_contact:
 
         return False
 
-    def _group_init(self, particle_image):
+    def _group_init(self, particle_image, v0_range=V0_RANGE, split_time=SPLIT_TIME, num_range=NUM_RANGE):
         t = pygame.time.get_ticks()
 
         if self.mod['name'] == "timer" or self.mod['name'] == "endless":
-            group_num = random.randint(NUM_RANGE[0], NUM_RANGE[1])
+            group_num = random.randint(num_range[0], num_range[1])
             group = physic_engine.group_motion(group_num, particle_image)
-            group.group_motion_init(V0_RANGE, X0_RANGE, Y0_RANGE, ANGLE_RANGE, t, SPLIT_TIME)
+            group.group_motion_init(v0_range, X0_RANGE, Y0_RANGE, ANGLE_RANGE, t, split_time)
 
         if self.mod['name'] == "single":
             group_num = random.randint(NUM_RANGE_LARGE[0], NUM_RANGE_LARGE[1])
             group = physic_engine.group_motion(group_num, particle_image)
-            group.group_motion_init(V0_RANGE, X0_RANGE, Y0_RANGE, ANGLE_RANGE, t, SPLIT_TIME)
+            group.group_motion_init(v0_range, X0_RANGE, Y0_RANGE, ANGLE_RANGE, t, split_time)
 
         return group
 
@@ -270,9 +290,59 @@ class good_contact:
 
         return num_active, num_block
 
+    def _score_wrapper(self):
+        if self.mod['tips'] is not True:
+            self.score['extra'] += 500
+
+        self.score['total'] = self.score_total
+        self.score['extra'] = self.score_extra
+        self.score['left'] = self.got_num['left']
+        self.score['right'] = self.got_num['right']
+        self.score['time'] = self.score_time
+
+        return self.score
+
+    def _new_group(self, num_active_left, num_active_right, group_left_list, group_right_list):
+        l_left = len(group_left_list)
+        l_right = len(group_right_list)
+
+        # 速度逐渐加快（每轮+0.1）
+        v0_range_left = (V0_RANGE[0] + (float(l_left) / 10 * 0.1), V0_RANGE[1] + (float(l_left) / 10 * 0.1))
+        v0_range_right = (V0_RANGE[0] + (float(l_right) / 10 * 0.1), V0_RANGE[1] + (float(l_right) / 10 * 0.1))
+
+        # 分裂需要撞击的次数逐渐减少直到为1
+        split_time_left = (SPLIT_TIME[0] - int(float(l_left) / 10 * 0.5),
+                           SPLIT_TIME[1] - int(float(l_left) / 10 * 0.5))
+        split_time_right = (SPLIT_TIME[0] - int(float(l_right) / 10 * 0.5),
+                            SPLIT_TIME[1] - int(float(l_right) / 10 * 0.5))
+        if split_time_right[0] <= 0:
+            split_time_right = 1
+        if split_time_right[1] <= 0:
+            split_time_right = 1
+        if split_time_left[0] <= 0:
+            split_time_left = 1
+        if split_time_left[1] <= 0:
+            split_time_left = 1
+
+        # 数量逐渐增多（每20轮+1）
+        num_left = (int(NUM_RANGE[0] + int(float(l_left) / 10 * 0.8)),
+                    int(NUM_RANGE[1] + int(float(l_left) / 10 * 0.8)))
+        num_right = (int(NUM_RANGE[0] + int(float(l_right) / 10 * 0.8)),
+                     int(NUM_RANGE[1] + int(float(l_right) / 10 * 0.8)))
+
+        if num_active_left <= 0:
+            group_left = self._group_init(self.chichi_smile, v0_range=v0_range_left,
+                                          split_time=split_time_left, num_range=num_left)
+            group_left_list.append(group_left)
+        if num_active_right <= 0:
+            group_right = self._group_init(self.chichi_hung, v0_range=v0_range_right,
+                                           split_time=split_time_right, num_range=num_right)
+            group_right_list.append(group_right)
+
     def main(self):
         self.music.play()
-        out, score = self.display()
+        self.display()
+
         logging.info("==========Good Contact END===========")
 
-        return out, score
+        return self.out, self.score

@@ -12,7 +12,7 @@ CEIL = 140
 WALL_L = 0
 WALL_R = 965
 
-V = 10      # 蒸笼的速度
+V = 10      # 蒸笼的速度 # bug here: when laptop is charged, V is lower than it when laptop is uncharged
 
 COLLISION_COEFFICIENT = 0.93
 SPLIT_COEFFICIENT = 1.1
@@ -25,7 +25,10 @@ ERROR_T = (0, 30)
 SPLIT_TIME = (3, 5)
 NUM_RANGE = (1, 3)
 
-NUM_RANGE_LARGE = (4, 8)
+NUM_RANGE_LARGE = (4, 6)
 
 zhenglong_pic = (118, 118)
 chichi_small_pic = (59, 47)
+
+DEAD_ACTIVE = 17
+DEAD_BLOCK = 10

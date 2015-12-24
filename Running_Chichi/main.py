@@ -8,9 +8,7 @@ import logging
 import os
 
 import opening
-import good_contact
 from good_contact_wrapper import good_contact_wrapper
-from good_contact_wrapper import score_out
 
 
 def init():
@@ -43,19 +41,10 @@ def main():
     open_out = open_window.main()
 
     if open_out == "enter game":
-        wrapper = good_contact_wrapper(screen)
-        wrapper.main()
-
-        '''
-        logging.info("===========ENTER Good Contact===========")
-        # mod = {'tips': True, 'name': 'endless'}
-        # mod = {'tips': True, 'name': 'timer'}
-        mod = {'tips': True, 'name': 'single'}
-        good = good_contact.good_contact(screen)
-        good.set_mod(mod)
-        good.main()
-        logging.info("===========EXIT Good Contact===========")
-        '''
+        result = 0
+        while result == 0:
+            wrapper = good_contact_wrapper(screen)
+            result = wrapper.main()
 
     logging.info("===========Running Chichi END===========")
 

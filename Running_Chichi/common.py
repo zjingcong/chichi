@@ -5,22 +5,87 @@
 import pygame
 import os
 import logging
+from tone_obj import music, sound
+
+
+import ConfigParser
+import sys
+from pygame.locals import *
 
 CURRENT_DIR = os.path.split(os.path.abspath(__file__))[0]
 
 
-class music:
-    def __init__(self, music_path):
-        self.track = pygame.mixer.music.load(music_path)
-        # pygame.time.delay(1000)
+class tone(music, sound):
+    # type = 1: music, mp3(background music) |  type = 0: sound, wav
+    def __init__(self, path, type=1):
+        music.__init__(self, path)
+        self.type = type
+        self._init()
 
-    def play(self, mod=-1, start=0.0):
-        pygame.mixer.music.play(mod, start)
+    def _init(self):
+        if self.type == 1:
+            music.init_music(self)
+        elif self.type == 0:
+            sound.init_sound(self)
 
-    # mod = 1: fadeout
+    # ch_mod = 2: volume change with position_x, ch_mod = -1: left channel, ch_mod = 1: right channel, ch_mod = 0: both
+    def play(self, mod=-1, start=0.0, ch_mod=0, pos_x=-1, width_x=-1):
+        if self.type == 1:
+            music.music_play(self, mod, start)
+        elif self.type == 0:
+            sound.sound_play(self, ch_mod=ch_mod, pos_x=pos_x, width_x=width_x)
+
+    # mod = 1: fadeout, mod = 0: stop
     def stop(self, mod=1):
-        if mod == 1:
-            pygame.mixer.music.fadeout(1200)
+        if self.type == 1:
+            music.music_stop(self, mod)
+
+
+# example for tone class
+def tone_init():
+    conf = ConfigParser.ConfigParser()
+    conf.read("config.conf")
+    tone_path = str(conf.get("path", "TONE_PATH"))
+    current_dir = CURRENT_DIR
+
+    screen_l = int(conf.get("variable", "SCREEN_LENGTH"))
+    screen_h = int(conf.get("variable", "SCREEN_HIGH"))
+    screen = pygame.display.set_mode([screen_l, screen_h], 0, 32)
+    pygame.display.set_caption("test: music by zjingcong")
+
+    music_path = "%s%sgood contact.mp3" % (current_dir, tone_path)
+    qiu_path = "%s%sqiu.wav" % (current_dir, tone_path)
+
+    back = tone(music_path)
+    qiu = tone(qiu_path, 0)
+
+    return back, qiu, screen
+
+
+def tone_main(back, qiu, screen):
+    back.play()
+
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                back.stop()
+                sys.exit()
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                pos = pygame.mouse.get_pos()
+                qiu.play(ch_mod=2, pos_x=pos[0], width_x=1024)
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_a:
+                    qiu.play(ch_mod=-1)
+                elif event.key == pygame.K_s:
+                    qiu.play(ch_mod=1)
+                elif event.key == pygame.K_d:
+                    qiu.play(ch_mod=0)
+
+'''
+if __name__ == '__main__':
+    tone_path, current_dir, screen = tone_init()
+    tone_main(tone_path, current_dir, screen)
+'''
 
 
 class animation:
@@ -76,12 +141,9 @@ class animation:
         else:
             logging.info("ERROR: No such animation mod.")
 
+
 # animation class example
-import ConfigParser
-import sys
-
-
-def example_init():
+def anim_init():
     conf = ConfigParser.ConfigParser()
     conf.read("config.conf")
     image_path = str(conf.get("path", "IMAGE_PATH"))
@@ -102,7 +164,7 @@ def example_init():
     return screen, anim
 
 
-def example_display(screen, anim):
+def anim_display(screen, anim):
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -114,13 +176,13 @@ def example_display(screen, anim):
         pygame.display.update()
 
 
-def example_main():
-    screen, anim = example_init()
-    example_display(screen, anim)
+def anim_main():
+    screen, anim = anim_init()
+    anim_display(screen, anim)
 
 '''
 if __name__ == '__main__':
-    example_main()
+    anim_main()
 '''
 
 
