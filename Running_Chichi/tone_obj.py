@@ -58,3 +58,6 @@ class sound(object):
         left_volume = 1.0 - right_volume
 
         return left_volume, right_volume
+
+    def set_sound_volume(self, volume):
+        self.sound.set_volume(volume)
