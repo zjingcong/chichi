@@ -3,6 +3,7 @@
 # v_1.0
 
 import pygame
+from pygame.locals import *
 import os
 import logging
 from tone_obj import music, sound
@@ -10,7 +11,6 @@ from tone_obj import music, sound
 
 import ConfigParser
 import sys
-from pygame.locals import *
 
 CURRENT_DIR = os.path.split(os.path.abspath(__file__))[0]
 
@@ -29,16 +29,23 @@ class tone(music, sound):
             sound.init_sound(self)
 
     # ch_mod = 2: volume change with position_x, ch_mod = -1: left channel, ch_mod = 1: right channel, ch_mod = 0: both
-    def play(self, mod=-1, start=0.0, ch_mod=0, pos_x=-1, width_x=-1):
+    def play(self, mod=-1, start=0.0, ch_mod=0, pos_x=-1, width_x=-1, volume=1):
         if self.type == 1:
-            music.music_play(self, mod, start)
+            music.music_play(self, mod, start, volume=volume)
         elif self.type == 0:
-            sound.sound_play(self, ch_mod=ch_mod, pos_x=pos_x, width_x=width_x)
+            sound.sound_play(self, ch_mod=ch_mod, pos_x=pos_x, width_x=width_x, volume=volume)
 
     # mod = 1: fadeout, mod = 0: stop
     def stop(self, mod=1):
         if self.type == 1:
             music.music_stop(self, mod)
+
+    # mod: 0 set the volume with playing 1: without
+    def set_volume(self, volume, mod=0):
+        if self.type == 0:
+            sound.set_sound_volume(self, volume, mod=mod)
+        elif self.type == 1:
+            music.set_music_volume(self, volume)
 
 
 # example for tone class
@@ -51,7 +58,7 @@ def tone_init():
     screen_l = int(conf.get("variable", "SCREEN_LENGTH"))
     screen_h = int(conf.get("variable", "SCREEN_HIGH"))
     screen = pygame.display.set_mode([screen_l, screen_h], 0, 32)
-    pygame.display.set_caption("test: music by zjingcong")
+    pygame.display.set_caption("test: tone by zjingcong")
 
     music_path = "%s%sgood contact.mp3" % (current_dir, tone_path)
     qiu_path = "%s%sqiu.wav" % (current_dir, tone_path)
@@ -72,7 +79,10 @@ def tone_main(back, qiu, screen):
                 sys.exit()
             if event.type == pygame.MOUSEBUTTONDOWN:
                 pos = pygame.mouse.get_pos()
-                qiu.play(ch_mod=2, pos_x=pos[0], width_x=1024)
+                # qiu.play(ch_mod=2, pos_x=pos[0], width_x=1024)
+                volume = float(pos[0]) / 1024
+                #qiu.set_volume(volume)
+                # back.set_volume(volume)
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_a:
                     qiu.play(ch_mod=-1)
@@ -80,6 +90,12 @@ def tone_main(back, qiu, screen):
                     qiu.play(ch_mod=1)
                 elif event.key == pygame.K_d:
                     qiu.play(ch_mod=0)
+
+        if pygame.mouse.get_pressed()[0] != 0:
+            pos = pygame.mouse.get_pos()
+            volume = float(pos[0]) / 1024
+            # back.set_volume(volume)
+            qiu.set_volume(volume)
 
 '''
 if __name__ == '__main__':
@@ -193,6 +209,8 @@ class button:
         self._l = l
         self._w = w
         self._screen = screen
+        self._up_path = button_up_path
+        self._down_path = button_down_path
         self._button_icon_up = pygame.image.load(button_up_path).convert_alpha()
         self._button_icon_down = pygame.image.load(button_down_path).convert_alpha()
         self.output = output
@@ -238,5 +256,63 @@ class button:
         if self.status == 0:
             self._button_out()
 
+    def button_status_reset(self):
+        self.status = -1
+        self.out = False
+        cache = self._down_path
+        self._down_path = self._up_path
+        self._up_path = cache
+
+        self._button_icon_down = pygame.image.load(self._down_path).convert_alpha()
+        self._button_icon_up = pygame.image.load(self._up_path).convert_alpha()
+
     def _button_out(self):
         self.out = True
+
+
+class slip_button:
+    def __init__(self, button_path, output, x, y, l, w, x_start, x_end, screen):
+        self.x = x
+        self.y = y
+        self._l = l
+        self._w = w
+        self._screen = screen
+        self.x_start = x_start
+        self.x_end = x_end
+        self.icon = pygame.image.load(button_path).convert_alpha()
+        self.output = output
+        self.status = 0    # 0: 未触发, 1: 触发, 2: start
+        self.mouse_pos = (-1, -1)
+        self.mouse_status = 'up'
+
+    def _mouse_on_button(self):
+        mouse_x = self.mouse_pos[0]
+        mouse_y = self.mouse_pos[1]
+        if (mouse_x > self.x) and (mouse_x < (self.x + self._l)) \
+                and (mouse_y > self.y) and (mouse_y < (self.y + self._w)):
+            return True
+        else:
+            return False
+
+    def mouse_detection(self, event):
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            self.mouse_status = 'down'
+            self.mouse_pos = pygame.mouse.get_pos()
+        if event.type == pygame.MOUSEBUTTONUP:
+            self.mouse_status = 'up'
+
+    def button_fresh(self):
+        if self.mouse_status == 'down' and self._mouse_on_button():
+            self.status = 1
+        elif self.mouse_status == 'up':
+            self.status = 0
+
+        if self.status == 1:
+            self.status = 1
+            if pygame.mouse.get_pressed()[0] != 0:
+                self.mouse_pos = pygame.mouse.get_pos()
+                if (self.mouse_pos[0] >= self.x_start) and (self.mouse_pos[0] <= self.x_end):
+                    self.x = self.mouse_pos[0]
+
+    def button_layout(self):
+        self._screen.blit(self.icon, [self.x, self.y])

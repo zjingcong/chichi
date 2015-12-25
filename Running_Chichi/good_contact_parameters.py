@@ -5,14 +5,14 @@ __title__ = ''
 __author__ = 'zjingcong'
 __mtime__ = '2015/12/22'
 
+import logging
+
 G = 0.0005
 
 GROUND = 605
 CEIL = 140
 WALL_L = 0
-WALL_R = 965
-
-V = 10      # 蒸笼的速度 # bug here: when laptop is charged, V is lower than it when laptop is uncharged
+WALL_R = 965     # 蒸笼的速度 # bug here: when laptop is charged, V is lower than it when laptop is uncharged
 
 COLLISION_COEFFICIENT = 0.93
 SPLIT_COEFFICIENT = 1.1
@@ -32,3 +32,24 @@ chichi_small_pic = (59, 47)
 
 DEAD_ACTIVE = 17
 DEAD_BLOCK = 10
+
+
+class settingDic:
+    def __init__(self):
+        # v: 蒸笼的速度
+        # bug here: when laptop is charged, V is lower than it when laptop is uncharged
+        self.argv = {'tips': True, 'back': 1, 'sound': 1, 'v': 5}
+
+    def get(self, name):
+        if name in self.argv:
+            return self.argv[name]
+        else:
+            logging.info("ERROR: [GET FAILURE] %s is not in setting_dic" % name)
+
+    def set(self, name, value):
+        if name in self.argv:
+            self.argv[name] = value
+        else:
+            logging.info("ERROR: [SET FAILURE] %s is not in setting_dic" % name)
+
+setting_dic = settingDic()

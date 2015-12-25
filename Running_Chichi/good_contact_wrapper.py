@@ -23,10 +23,13 @@ import common
 import wrapper
 import sys
 from scratch_card import scratch_card as card
+from good_contact_parameters import *
+import setting
 
 
 class good_contact_wrapper(wrapper.module):
     def __init__(self, screen):
+        self.tips = setting_dic.get('tips')
         super(good_contact_wrapper, self).__init__(screen)
 
     def _image_load(self):
@@ -83,6 +86,9 @@ class good_contact_wrapper(wrapper.module):
                     print pygame.mouse.get_pos()
                 for button in self.button_list:
                     button.mouse_detection(event)
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_w:
+                        setting.setting(self.screen, self.music)
 
             for button in self.button_list:
                 if button.out:
@@ -128,9 +134,9 @@ class good_contact_wrapper(wrapper.module):
         output = self.display()
 
         if output == "play":
-            mod_selection = mod_set(self.screen)
+            mod_selection = mod_set(self.screen, self.music)
             mod_select = mod_selection.main()
-            mod = {'tips': True, 'name': mod_select}
+            mod = {'tips': self.tips, 'name': mod_select}
             self.music.stop()
             result = self._game(mod)
 
@@ -144,7 +150,8 @@ class good_contact_wrapper(wrapper.module):
 
 
 class mod_set(wrapper.module):
-    def __init__(self, screen):
+    def __init__(self, screen, music_obj):
+        self.music_obj = music_obj
         super(mod_set, self).__init__(screen)
 
     def _image_load(self):
@@ -196,6 +203,10 @@ class mod_set(wrapper.module):
                     print pygame.mouse.get_pos()
                 for button in self.button_list:
                     button.mouse_detection(event)
+
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_w:
+                        setting.setting(self.screen, self.music_obj)
 
             for button in self.button_list:
                 if button.out:
@@ -416,7 +427,9 @@ class score_card(wrapper.module):
             self.screen.blit(self.score_extra_text, self.extra_textRect)
             self.screen.blit(self.score_left_text, self.left_textRect)
             self.screen.blit(self.score_right_text, self.right_textRect)
-            self.screen.blit(self.score_time_text, self.time_textRect)
+
+            if self.score['time'] != 0:
+                self.screen.blit(self.score_time_text, self.time_textRect)
 
             self.scratch.display()
             for button in self.button_list:
