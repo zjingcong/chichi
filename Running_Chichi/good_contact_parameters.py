@@ -12,7 +12,7 @@ G = 0.0005
 GROUND = 605
 CEIL = 140
 WALL_L = 0
-WALL_R = 965     # 蒸笼的速度 # bug here: when laptop is charged, V is lower than it when laptop is uncharged
+WALL_R = 965
 
 COLLISION_COEFFICIENT = 0.93
 SPLIT_COEFFICIENT = 1.1
